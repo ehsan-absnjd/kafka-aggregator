@@ -15,6 +15,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Data
 @Slf4j
 public class CreateTimeAggregatorService {
     private static String producerName = "createTimeNonSchedulerAggregator";
@@ -34,7 +35,11 @@ public class CreateTimeAggregatorService {
 
     @KafkaListener(topics = "${spring.kafka.topic-name}", groupId = "${spring.kafka.create-time.service.group-id}")
     public synchronized void listen(ConsumerRecord<String, String> record) {
-        recordsCounts.put(record.value(), record.timestamp());
+        addRecord(record.value(), record.timestamp());
+    }
+
+    public void addRecord(String value, long timestamp) {
+        recordsCounts.put(value, timestamp);
     }
 
     @PostConstruct
@@ -44,7 +49,7 @@ public class CreateTimeAggregatorService {
     }
 
     @Data
-    private class RecordsCounts {
+    public class RecordsCounts {
         private RecordsCounts previous;
         private RecordContainer recordContainer;
         private boolean isFirstRound = true;
