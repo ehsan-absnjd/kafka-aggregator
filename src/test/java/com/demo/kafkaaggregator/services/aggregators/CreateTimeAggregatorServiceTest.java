@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.stream.IntStream;
 
@@ -24,6 +25,7 @@ class CreateTimeAggregatorServiceTest {
     }
 
     @Test
+    @DirtiesContext
     void whenAddingRecordWithTimestampBeforeTheStartTimestampInTheFirstRound_ifItsLowerThanLastTimestamp_startTimeStampShouldChange() {
         service.addRecord("value", 1000);
         assertThat(service.getRecordsCounts().getStartTimestamp()).isEqualTo(1000);
@@ -33,6 +35,7 @@ class CreateTimeAggregatorServiceTest {
     }
 
     @Test
+    @DirtiesContext
     void whenAddingRecordWithTimestampBeforeTheStartTimestampInTheFirstRound_ifItsNotLowerThanLastTimestamp_startTimeStampShouldChange() {
         service.addRecord("value", 1000);
         assertThat(service.getRecordsCounts().getStartTimestamp()).isEqualTo(1000);
@@ -42,6 +45,7 @@ class CreateTimeAggregatorServiceTest {
     }
 
     @Test
+    @DirtiesContext
     void whenAddingRecordWithTimestampGraterThanStartTimestampPlusWindow_newRoundShouldBegin() {
         CreateTimeAggregatorService.RecordsCounts recordsCounts = service.getRecordsCounts();
         service.addRecord("value", 1000);
@@ -62,20 +66,37 @@ class CreateTimeAggregatorServiceTest {
     }
 
     @Test
+    @DirtiesContext
     void whenNewRoundHasBeganButGraceTimeHasNotPassed_nothingShouldBePublished() {
         long windowMs = service.getWindow() * 60000;
-        addValueForThresholdTimes();
+        addValueForThresholdTimes((int) service.getThreshold());
         assertThat(service.getRecordsCounts().getRecordContainer().getResults()).hasSize(1);
         assertThat(repository.count()).isEqualTo(0);
 
-        service.addRecord("anotherValue" , 1000 + windowMs + service.getGracePeriod() - 1);
+        service.addRecord("anotherValue", 1000 + windowMs + service.getGracePeriod() - 1);
         assertThat(repository.count()).isEqualTo(0);
 
-        service.addRecord("anotherValue" , 1000 + windowMs + service.getGracePeriod());
+        service.addRecord("anotherValue", 1000 + windowMs + service.getGracePeriod());
         assertThat(repository.count()).isEqualTo(1);
     }
 
-    private void addValueForThresholdTimes() {
-        IntStream.range(0, (int) service.getThreshold()).forEach(i -> service.addRecord("value", 1000 + i));
+    @Test
+    @DirtiesContext
+    void whenNewRoundHasBeganButGraceTimeHasNotPassed_valueShouldBeAddedToPreviousRound() {
+        long windowMs = service.getWindow() * 60000;
+        addValueForThresholdTimes((int) service.getThreshold() -1);
+        assertThat(service.getRecordsCounts().getRecordContainer().getResults()).hasSize(0);
+
+        service.addRecord("anotherValue", 1000 + windowMs + service.getGracePeriod() - 1);
+        service.addRecord("value", 1001);
+        assertThat(service.getRecordsCounts().getPrevious().getRecordContainer().getResults()).hasSize(1);
+        assertThat(repository.count()).isEqualTo(0);
+
+        service.addRecord("anotherValue", 1000 + windowMs + service.getGracePeriod());
+        assertThat(repository.count()).isEqualTo(1);
+    }
+
+    private void addValueForThresholdTimes(int times) {
+        IntStream.range(0, times).forEach(i -> service.addRecord("value", 1000 + i));
     }
 }
