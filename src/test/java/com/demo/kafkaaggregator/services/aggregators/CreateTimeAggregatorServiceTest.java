@@ -5,7 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.stream.IntStream;
 
@@ -22,10 +21,10 @@ class CreateTimeAggregatorServiceTest {
     @BeforeEach
     public void init() {
         repository.deleteAll();
+        service.init();
     }
 
     @Test
-    @DirtiesContext
     void whenAddingRecordWithTimestampBeforeTheStartTimestampInTheFirstRound_ifItsLowerThanLastTimestamp_startTimeStampShouldChange() {
         service.addRecord("value", 1000);
         assertThat(service.getRecordsCounts().getStartTimestamp()).isEqualTo(1000);
@@ -35,7 +34,6 @@ class CreateTimeAggregatorServiceTest {
     }
 
     @Test
-    @DirtiesContext
     void whenAddingRecordWithTimestampBeforeTheStartTimestampInTheFirstRound_ifItsNotLowerThanLastTimestamp_startTimeStampShouldChange() {
         service.addRecord("value", 1000);
         assertThat(service.getRecordsCounts().getStartTimestamp()).isEqualTo(1000);
@@ -45,7 +43,6 @@ class CreateTimeAggregatorServiceTest {
     }
 
     @Test
-    @DirtiesContext
     void whenAddingRecordWithTimestampGraterThanStartTimestampPlusWindow_newRoundShouldBegin() {
         CreateTimeAggregatorService.RecordsCounts recordsCounts = service.getRecordsCounts();
         service.addRecord("value", 1000);
@@ -66,7 +63,6 @@ class CreateTimeAggregatorServiceTest {
     }
 
     @Test
-    @DirtiesContext
     void whenNewRoundHasBeganButGraceTimeHasNotPassed_nothingShouldBePublished() {
         long windowMs = service.getWindow() * 60000;
         addValueForThresholdTimes((int) service.getThreshold());
@@ -81,10 +77,9 @@ class CreateTimeAggregatorServiceTest {
     }
 
     @Test
-    @DirtiesContext
     void whenNewRoundHasBeganButGraceTimeHasNotPassed_valueShouldBeAddedToPreviousRound() {
         long windowMs = service.getWindow() * 60000;
-        addValueForThresholdTimes((int) service.getThreshold() -1);
+        addValueForThresholdTimes((int) service.getThreshold() - 1);
         assertThat(service.getRecordsCounts().getRecordContainer().getResults()).hasSize(0);
 
         service.addRecord("anotherValue", 1000 + windowMs + service.getGracePeriod() - 1);
