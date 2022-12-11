@@ -84,10 +84,15 @@ public class CreateTimeAggregatorService {
 
         private void handleNonFirstRounds(String value, long timestamp) {
             if (belongsToPreviousRounds(timestamp)) {
-                handePreviousRound(value);
+                if (belongsToExactlyPreviousRound(timestamp))
+                    handePreviousRound(value);
             } else {
                 putForward(value, timestamp);
             }
+        }
+
+        private boolean belongsToExactlyPreviousRound(long timestamp) {
+            return startTimestamp - timestamp <= windowLength;
         }
 
         private boolean isFirstRecord() {
