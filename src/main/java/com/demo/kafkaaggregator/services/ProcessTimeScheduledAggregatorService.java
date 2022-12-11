@@ -1,6 +1,9 @@
 package com.demo.kafkaaggregator.services;
 
 import com.demo.kafkaaggregator.model.RecordContainer;
+import com.demo.kafkaaggregator.services.elasticsearch.FilteredRecordService;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,8 +14,12 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
+@Data
 @Slf4j
+@RequiredArgsConstructor
 public class ProcessTimeScheduledAggregatorService {
+    private static String producerName = "processTimeSchedulerAggregator";
+    private final FilteredRecordService service;
 
     @Value("${window.threshold}")
     private long threshold;
@@ -22,8 +29,8 @@ public class ProcessTimeScheduledAggregatorService {
     @Scheduled(fixedRateString = "${scheduler.min}")
     public synchronized void refresh() {
         log.info("scheduler starting.");
-        Optional.ofNullable(container).map(RecordContainer::getResults)
-                .ifPresent(r -> log.info(r.toString()));
+        Optional.ofNullable(container).map(c-> c.getRecordSet(producerName))
+                .ifPresent(service::saveAll);
         container = new RecordContainer(threshold);
     }
 

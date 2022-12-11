@@ -2,8 +2,11 @@ package com.demo.kafkaaggregator.model;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class RecordContainer {
@@ -20,5 +23,12 @@ public class RecordContainer {
 
     public Map<String, Long> getResults() {
         return finalResults;
+    }
+
+    public Set<FilteredRecord> getRecordSet(String producer) {
+        Date date = new Date();
+        return finalResults.entrySet().stream()
+                .map(e -> FilteredRecord.builder().count(e.getValue()).date(date).producer(producer).url(e.getKey()).build())
+                .collect(Collectors.toSet());
     }
 }
