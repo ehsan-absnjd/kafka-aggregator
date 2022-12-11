@@ -48,7 +48,9 @@ class ProcessTimeNonScheduledAggregatorServiceTest {
     void whenReceivingRecordAfterWindowTime_oldRecordContainersDataShouldBeSaved() {
         mockTime(1);
         service.listen(getRecord("value"));
+        mockTime(10001);
         service.listen(getRecord("value"));
+        mockTime(20001);
         service.listen(getRecord("otherValue"));
         RecordContainer recordContainer = service.getRecordContainer();
 
