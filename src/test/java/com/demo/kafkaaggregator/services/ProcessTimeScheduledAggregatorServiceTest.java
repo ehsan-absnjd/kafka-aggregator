@@ -2,6 +2,7 @@ package com.demo.kafkaaggregator.services;
 
 import com.demo.kafkaaggregator.model.RecordContainer;
 import com.demo.kafkaaggregator.repositories.FilteredRecordRepository;
+import com.demo.kafkaaggregator.services.aggregators.ProcessTimeScheduledAggregatorService;
 import com.demo.kafkaaggregator.services.elasticsearch.FilteredRecordService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

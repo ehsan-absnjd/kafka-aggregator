@@ -1,4 +1,4 @@
-package com.demo.kafkaaggregator.services;
+package com.demo.kafkaaggregator.services.aggregators;
 
 import com.demo.kafkaaggregator.model.RecordContainer;
 import com.demo.kafkaaggregator.services.elasticsearch.FilteredRecordService;
