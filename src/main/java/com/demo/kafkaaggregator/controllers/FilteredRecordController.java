@@ -12,7 +12,13 @@ public class FilteredRecordController {
     private final FilteredRecordService service;
 
     @GetMapping("/data")
-    public Iterable<FilteredRecord> getAll(){
+    public Iterable<FilteredRecord> getAll() {
         return service.getAll();
+    }
+
+    @GetMapping("/clear")
+    public String clearAll() {
+        service.clearAllData();
+        return "all data cleared successfully";
     }
 }

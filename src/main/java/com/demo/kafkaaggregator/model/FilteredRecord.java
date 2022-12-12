@@ -1,7 +1,9 @@
 package com.demo.kafkaaggregator.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
@@ -12,6 +14,8 @@ import java.util.Date;
 @Data
 @Builder
 @Document(indexName = "urls")
+@NoArgsConstructor
+@AllArgsConstructor
 public class FilteredRecord {
     @Id
     private String id;

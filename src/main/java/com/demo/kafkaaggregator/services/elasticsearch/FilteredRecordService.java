@@ -19,4 +19,8 @@ public class FilteredRecordService {
     public Iterable<FilteredRecord> getAll() {
         return repository.findAll();
     }
+
+    public void clearAllData(){
+        repository.deleteAll();
+    }
 }
