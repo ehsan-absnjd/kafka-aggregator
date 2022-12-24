@@ -27,7 +27,7 @@ public class ProcessTimeScheduledAggregatorService {
     private volatile RecordCounter counter;
 
     @Scheduled(fixedRateString = "${scheduler.min}")
-    public synchronized void refresh() {
+    public void refresh() {
         log.info("scheduler starting.");
         Optional.ofNullable(counter).ifPresent(this::tryPublishing);
         counter = new RecordCounter(threshold);
@@ -41,7 +41,7 @@ public class ProcessTimeScheduledAggregatorService {
     }
 
     @KafkaListener(topics = "${spring.kafka.topic-name}", groupId = "${spring.kafka.scheduler.service.group-id}")
-    public synchronized void listen(ConsumerRecord<String, String> record) {
+    public void listen(ConsumerRecord<String, String> record) {
         counter.put(record.value());
     }
 }
