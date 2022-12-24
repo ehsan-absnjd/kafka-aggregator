@@ -1,6 +1,6 @@
 package com.demo.kafkaaggregator.services.aggregators;
 
-import com.demo.kafkaaggregator.model.RecordContainer;
+import com.demo.kafkaaggregator.model.RecordCounter;
 import com.demo.kafkaaggregator.repositories.FilteredRecordRepository;
 import com.demo.kafkaaggregator.services.time.TimeService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -28,7 +28,8 @@ class ProcessTimeNonScheduledAggregatorServiceTest {
     public void init() {
         repository.deleteAll();
         service.setStartTime(0);
-        service.setCurrentRound(0);
+        service.getCurrentRound().set(0);
+        service.getIsStart().set(true);
         service.setThreshold(2);
         service.setWindow(1);
     }
@@ -37,11 +38,11 @@ class ProcessTimeNonScheduledAggregatorServiceTest {
     void whenReceivingRecordAfterWindowTime_newRecordContainerShouldBeSet() {
         mockTime(1);
         service.listen(getRecord("value"));
-        RecordContainer recordContainer = service.getRecordContainer();
+        RecordCounter recordCounter = service.getRecordCounter();
 
         mockTime(60001);
         service.listen(getRecord("value"));
-        assertThat(service.getRecordContainer()).isNotEqualTo(recordContainer);
+        assertThat(service.getRecordCounter()).isNotEqualTo(recordCounter);
     }
 
     @Test
@@ -52,11 +53,12 @@ class ProcessTimeNonScheduledAggregatorServiceTest {
         service.listen(getRecord("value"));
         mockTime(20001);
         service.listen(getRecord("otherValue"));
-        RecordContainer recordContainer = service.getRecordContainer();
+        RecordCounter recordCounter = service.getRecordCounter();
 
         mockTime(60001);
         service.listen(getRecord("value"));
         assertThat(repository.count()).isEqualTo(1);
+        assertThat(service.getRecordCounter()).isNotEqualTo(recordCounter);
     }
 
     private void mockTime(long millis) {
@@ -66,6 +68,4 @@ class ProcessTimeNonScheduledAggregatorServiceTest {
     private ConsumerRecord<String, String> getRecord(String value) {
         return new ConsumerRecord<>("", 0, 0, null, value);
     }
-
-
 }

@@ -1,6 +1,6 @@
 package com.demo.kafkaaggregator.services.aggregators;
 
-import com.demo.kafkaaggregator.model.RecordContainer;
+import com.demo.kafkaaggregator.model.RecordCounter;
 import com.demo.kafkaaggregator.services.elasticsearch.FilteredRecordService;
 import com.demo.kafkaaggregator.services.time.TimeService;
 import lombok.Data;
@@ -10,6 +10,9 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @Data
@@ -25,40 +28,54 @@ public class ProcessTimeNonScheduledAggregatorService {
     @Value("${window.threshold}")
     private long threshold;
 
-    private RecordContainer recordContainer;
+    private volatile RecordCounter recordCounter;
+
+    private AtomicBoolean isStart = new AtomicBoolean(true);
 
     private long startTime;
 
-    private long currentRound;
+    private AtomicLong currentRound = new AtomicLong(0);
 
     @Value("${window.min}")
     private long window;
 
     @KafkaListener(topics = "${spring.kafka.topic-name}", groupId = "${spring.kafka.non-scheduler.service.group-id}")
-    public synchronized void listen(ConsumerRecord<String, String> record) {
+    public void listen(ConsumerRecord<String, String> record) {
         init();
-        recordContainer.put(record.value());
+        tryPuttingInRecordCounter(record.value());
+    }
+
+    private void tryPuttingInRecordCounter(String value) {
+        while (!recordCounter.put(value)) {
+        }
     }
 
     private void init() {
-        if (isStart()) {
+        if (isStart.get() && isStart.compareAndSet(true, false)) {
             startTime = timeService.getCurrentMillis();
-            recordContainer = new RecordContainer(threshold);
+            recordCounter = new RecordCounter(threshold);
         } else {
             publishResultsAndStartNewRoundIfNecessary();
         }
     }
 
     private void publishResultsAndStartNewRoundIfNecessary() {
-        long calculatedRound = (timeService.getCurrentMillis() - startTime) / (window * 60000);
-        if (calculatedRound > currentRound) {
-            filteredRecordService.saveAll(recordContainer.getRecordSet(producerName));
-            currentRound = calculatedRound;
-            recordContainer = new RecordContainer(threshold);
+        long calculatedRound = getCalculatedRound();
+        long current = currentRound.get();
+        if (calculatedRound > current && currentRound.compareAndSet(current, calculatedRound)) {
+            recordCounter.blockInputs();
+            tryPublishing();
+            recordCounter = new RecordCounter(threshold);
         }
     }
 
-    private boolean isStart() {
-        return startTime == 0l;
+    private long getCalculatedRound() {
+        return (timeService.getCurrentMillis() - startTime) / (window * 60000);
+    }
+
+    private void tryPublishing() {
+        while (!recordCounter.isFree()) {
+        }
+        filteredRecordService.saveAll(recordCounter.getRecordSet(producerName));
     }
 }

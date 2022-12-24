@@ -1,6 +1,6 @@
 package com.demo.kafkaaggregator.services.aggregators;
 
-import com.demo.kafkaaggregator.model.RecordContainer;
+import com.demo.kafkaaggregator.model.RecordCounter;
 import com.demo.kafkaaggregator.services.elasticsearch.FilteredRecordService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -24,18 +24,24 @@ public class ProcessTimeScheduledAggregatorService {
     @Value("${window.threshold}")
     private long threshold;
 
-    private RecordContainer container;
+    private volatile RecordCounter counter;
 
     @Scheduled(fixedRateString = "${scheduler.min}")
     public synchronized void refresh() {
         log.info("scheduler starting.");
-        Optional.ofNullable(container).map(c-> c.getRecordSet(producerName))
-                .ifPresent(service::saveAll);
-        container = new RecordContainer(threshold);
+        Optional.ofNullable(counter).ifPresent(this::tryPublishing);
+        counter = new RecordCounter(threshold);
+    }
+
+    private void tryPublishing(RecordCounter records) {
+        records.blockInputs();
+        while (!counter.isFree()) {
+        }
+        service.saveAll(counter.getRecordSet(producerName));
     }
 
     @KafkaListener(topics = "${spring.kafka.topic-name}", groupId = "${spring.kafka.scheduler.service.group-id}")
     public synchronized void listen(ConsumerRecord<String, String> record) {
-        container.put(record.value());
+        counter.put(record.value());
     }
 }
